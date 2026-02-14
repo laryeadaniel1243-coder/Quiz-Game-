@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrainBoost Ultimate</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+body{
+  background: linear-gradient(135deg,#4f46e5,#9333ea,#ec4899);
+}
+.mobile-card{
+  border-radius:30px;
+}
+</style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen p-4">
+
+<div class="mobile-card bg-white shadow-2xl w-full max-w-md p-6">
+
+<h1 class="text-center text-2xl font-bold text-indigo-600 mb-4">🧠 BrainBoost Ultimate</h1>
+
+<!-- Setup -->
+<div id="setup">
+<input id="p1" placeholder="Player 1 Name" class="border p-2 w-full mb-2 rounded">
+<input id="p2" placeholder="Player 2 Name" class="border p-2 w-full mb-2 rounded">
+
+<select id="category" class="border p-2 w-full mb-2 rounded">
+<option value="science">Science</option>
+<option value="math">Mathematics</option>
+<option value="general">General Knowledge</option>
+<option value="riddles">Riddles</option>
+</select>
+
+<select id="difficulty" class="border p-2 w-full mb-4 rounded">
+<option value="easy">Easy</option>
+<option value="medium">Medium</option>
+<option value="hard">Hard</option>
+</select>
+
+<button onclick="startGame()" class="bg-indigo-600 text-white w-full py-2 rounded-lg">
+Start Game
+</button>
+</div>
+
+<!-- Quiz -->
+<div id="quiz" class="hidden">
+
+<p id="turn" class="text-center font-semibold mb-2"></p>
+<p id="question" class="mb-4 font-medium"></p>
+
+<input id="answerInput" placeholder="Type your answer..." class="border p-2 w-full rounded mb-2">
+<button onclick="submitAnswer()" class="bg-indigo-600 text-white w-full py-2 rounded">
+Submit Answer
+</button>
+
+<p class="mt-4 text-sm text-center">
+Score: <span id="s1">0</span> | <span id="s2">0</span>
+</p>
+
+</div>
+
+<!-- Result -->
+<div id="result" class="hidden text-center">
+<h2 class="text-xl font-bold mb-2">🏆 Winner</h2>
+<p id="winnerText"></p>
+<button onclick="location.reload()" class="bg-indigo-600 text-white w-full py-2 mt-3 rounded">
+Play Again
+</button>
+</div>
+
+<!-- Leaderboard -->
+<div class="mt-4">
+<h3 class="font-bold text-sm">🏅 Last 5 Winners</h3>
+<ul id="leaderboard" class="text-sm"></ul>
+</div>
+
+</div>
+
+<audio id="correctSound" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
+<audio id="wrongSound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-bass-buzzer-948.mp3"></audio>
+
+<script>
+
+const questions = {
+science:{
+hard:[
+{q:"What is the second law of thermodynamics about?",a:"entropy"},
+{q:"What particle has no charge and nearly no mass?",a:"neutrino"}
+]},
+math:{
+hard:[
+{q:"Derivative of x²?",a:"2x"},
+{q:"Integral of 1/x dx?",a:"lnx"}
+]},
+general:{
+hard:[
+{q:"Who wrote 'The Republic'?",a:"plato"},
+{q:"What year did WW2 end?",a:"1945"}
+]},
+riddles:{
+hard:[
+{q:"I speak without a mouth and hear without ears. What am I?",a:"echo"},
+{q:"What has keys but no locks?",a:"piano"}
+]}
+};
+
+let p1,p2,currentPlayer=1;
+let score1=0,score2=0;
+let qIndex=0;
+let selectedQuestions=[];
+
+function startGame(){
+p1=document.getElementById("p1").value||"Player1";
+p2=document.getElementById("p2").value||"Player2";
+const cat=document.getElementById("category").value;
+const diff=document.getElementById("difficulty").value;
+
+selectedQuestions=questions[cat][diff];
+document.getElementById("setup").classList.add("hidden");
+document.getElementById("quiz").classList.remove("hidden");
+loadQuestion();
+}
+
+function loadQuestion(){
+if(qIndex>=selectedQuestions.length){ endGame(); return;}
+document.getElementById("turn").textContent=
+(currentPlayer===1?p1:p2)+"'s Turn";
+document.getElementById("question").textContent=
+selectedQuestions[qIndex].q;
+document.getElementById("answerInput").value="";
+}
+
+function submitAnswer(){
+const userAns=document.getElementById("answerInput").value.trim().toLowerCase();
+const correctAns=selectedQuestions[qIndex].a.toLowerCase();
+
+if(userAns===correctAns){
+document.getElementById("correctSound").play();
+if(currentPlayer===1){score1++;document.getElementById("s1").textContent=score1;}
+else{score2++;document.getElementById("s2").textContent=score2;}
+}else{
+document.getElementById("wrongSound").play();
+}
+
+currentPlayer=currentPlayer===1?2:1;
+qIndex++;
+loadQuestion();
+}
+
+function endGame(){
+document.getElementById("quiz").classList.add("hidden");
+document.getElementById("result").classList.remove("hidden");
+
+let winner;
+if(score1>score2) winner=p1;
+else if(score2>score1) winner=p2;
+else winner="Draw";
+
+document.getElementById("winnerText").textContent=winner;
+
+if(winner!=="Draw"){
+confetti({particleCount:150,spread:70});
+saveWinner(winner);
+}
+}
+
+function saveWinner(name){
+let board=JSON.parse(localStorage.getItem("board"))||[];
+board.push(name);
+localStorage.setItem("board",JSON.stringify(board));
+loadBoard();
+}
+
+function loadBoard(){
+let board=JSON.parse(localStorage.getItem("board"))||[];
+let list=document.getElementById("leaderboard");
+list.innerHTML="";
+board.slice(-5).reverse().forEach(w=>{
+let li=document.createElement("li");
+li.textContent=w;
+list.appendChild(li);
+});
+}
+loadBoard();
+
+</script>
+
+</body>
+</html>
