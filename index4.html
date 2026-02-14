@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrainBoost Global</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<!-- Google AdSense -->
+<script async 
+src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXX"
+crossorigin="anonymous"></script>
+
+<style>
+body{
+background: linear-gradient(135deg,#4f46e5,#9333ea,#ec4899);
+}
+.app-card{
+border-radius:30px;
+}
+.chat-box{
+height:150px;
+overflow-y:auto;
+}
+</style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen p-4">
+
+<div class="app-card bg-white w-full max-w-md shadow-2xl p-6">
+
+<h1 class="text-center text-2xl font-bold text-indigo-600 mb-3">
+🌍 BrainBoost Global
+</h1>
+
+<!-- Setup -->
+<div id="setup">
+<input id="username" placeholder="Enter Username" class="border p-2 w-full mb-2 rounded">
+<input id="roomId" placeholder="Room ID" class="border p-2 w-full mb-3 rounded">
+
+<button onclick="joinRoom()" class="bg-indigo-600 text-white w-full py-2 rounded">
+Join Room
+</button>
+</div>
+
+<!-- Quiz -->
+<div id="game" class="hidden">
+
+<p id="question" class="font-medium mb-3"></p>
+<input id="answer" placeholder="Type answer..." class="border p-2 w-full rounded mb-2">
+<button onclick="submitAnswer()" class="bg-indigo-600 text-white w-full py-2 rounded">
+Submit
+</button>
+
+<p class="text-center text-sm mt-2">
+Score: <span id="score">0</span>
+</p>
+
+<!-- Live Chat -->
+<div class="mt-4">
+<h3 class="font-bold text-sm">💬 Live Chat</h3>
+<div id="chatBox" class="chat-box border p-2 rounded mb-2 text-sm"></div>
+<input id="chatInput" placeholder="Type message..." class="border p-2 w-full rounded mb-2">
+<button onclick="sendMessage()" class="bg-gray-800 text-white w-full py-1 rounded">
+Send
+</button>
+</div>
+
+</div>
+
+<!-- Global Ranking -->
+<div class="mt-4">
+<h3 class="font-bold text-sm">🏆 Global Ranking</h3>
+<ul id="globalRank" class="text-sm"></ul>
+</div>
+
+<!-- Ad Section -->
+<div class="mt-4">
+<ins class="adsbygoogle"
+style="display:block"
+data-ad-client="ca-pub-XXXXXXXXXXXX"
+data-ad-slot="1234567890"
+data-ad-format="auto"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+</div>
+
+</div>
+
+<!-- Sounds -->
+<audio id="correctSound" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
+<audio id="wrongSound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-bass-buzzer-948.mp3"></audio>
+
+<script type="module">
+
+// 🔥 FIREBASE CONFIG (PUT YOURS HERE)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, push } 
+from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+import { getFirestore, collection, addDoc, getDocs, orderBy, query } 
+from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "YOUR_API_KEY",
+authDomain: "YOUR_AUTH_DOMAIN",
+databaseURL: "YOUR_DATABASE_URL",
+projectId: "YOUR_PROJECT_ID",
+storageBucket: "YOUR_BUCKET",
+messagingSenderId: "YOUR_SENDER_ID",
+appId: "YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const firestore = getFirestore(app);
+
+let username="", room="";
+let score=0;
+
+const questions=[
+{q:"What is the speed of light in vacuum (km/s)?",a:"300000"},
+{q:"Hardest natural substance?",a:"diamond"}
+];
+let index=0;
+
+// JOIN ROOM
+window.joinRoom=function(){
+username=document.getElementById("username").value;
+room=document.getElementById("roomId").value;
+
+document.getElementById("setup").classList.add("hidden");
+document.getElementById("game").classList.remove("hidden");
+
+loadQuestion();
+listenChat();
+}
+
+// LOAD QUESTION
+function loadQuestion(){
+document.getElementById("question").textContent=questions[index].q;
+}
+
+// SUBMIT ANSWER
+window.submitAnswer=function(){
+let ans=document.getElementById("answer").value.trim().toLowerCase();
+if(ans===questions[index].a){
+document.getElementById("correctSound").play();
+score++;
+document.getElementById("score").textContent=score;
+}else{
+document.getElementById("wrongSound").play();
+}
+index++;
+if(index>=questions.length){
+confetti({particleCount:200,spread:80});
+saveGlobalScore();
+}
+else loadQuestion();
+}
+
+// SAVE GLOBAL SCORE
+async function saveGlobalScore(){
+await addDoc(collection(firestore,"rankings"),{
+name:username,
+score:score,
+timestamp:Date.now()
+});
+loadRanking();
+}
+
+// LOAD GLOBAL RANKING
+async function loadRanking(){
+const q=query(collection(firestore,"rankings"),orderBy("score","desc"));
+const snapshot=await getDocs(q);
+const list=document.getElementById("globalRank");
+list.innerHTML="";
+snapshot.forEach(doc=>{
+let li=document.createElement("li");
+li.textContent=doc.data().name+" - "+doc.data().score;
+list.appendChild(li);
+});
+}
+loadRanking();
+
+// 💬 REAL-TIME CHAT
+window.sendMessage=function(){
+let message=document.getElementById("chatInput").value;
+push(ref(db,"rooms/"+room+"/chat"),{
+user:username,
+text:message
+});
+document.getElementById("chatInput").value="";
+}
+
+function listenChat(){
+onValue(ref(db,"rooms/"+room+"/chat"),snapshot=>{
+const data=snapshot.val();
+const box=document.getElementById("chatBox");
+box.innerHTML="";
+for(let id in data){
+box.innerHTML+=`<p><b>${data[id].user}:</b> ${data[id].text}</p>`;
+}
+box.scrollTop=box.scrollHeight;
+});
+}
+
+</script>
+
+</body>
+</html>
