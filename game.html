@@ -1,0 +1,96 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrainBoost Quiz</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+body{
+background: linear-gradient(135deg,#4f46e5,#9333ea,#ec4899);
+}
+.card{
+border-radius:30px;
+}
+</style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen p-4">
+
+<div class="card bg-white shadow-2xl w-full max-w-md p-6">
+
+<h1 class="text-center text-2xl font-bold text-indigo-600 mb-4">
+🧠 BrainBoost Quiz
+</h1>
+
+<!-- Setup -->
+<div id="setup">
+
+<input id="p1" placeholder="Player 1 Name"
+class="border p-2 w-full mb-2 rounded">
+
+<input id="p2" placeholder="Player 2 Name"
+class="border p-2 w-full mb-2 rounded">
+
+<select id="category"
+class="border p-2 w-full mb-2 rounded">
+<option value="science">Science</option>
+<option value="math">Mathematics</option>
+<option value="general">General Knowledge</option>
+<option value="riddles">Riddles</option>
+</select>
+
+<select id="difficulty"
+class="border p-2 w-full mb-4 rounded">
+<option value="easy">Easy</option>
+<option value="medium">Medium</option>
+<option value="hard">Hard</option>
+</select>
+
+<button onclick="startGame()"
+class="bg-indigo-600 text-white w-full py-2 rounded">
+Start Game
+</button>
+
+</div>
+
+<!-- Quiz -->
+<div id="quiz" class="hidden">
+
+<p id="turn" class="text-center font-semibold mb-2"></p>
+<p id="question" class="mb-3 font-medium"></p>
+
+<input id="answerInput"
+placeholder="Type your answer..."
+class="border p-2 w-full rounded mb-2">
+
+<button onclick="submitAnswer()"
+class="bg-indigo-600 text-white w-full py-2 rounded">
+Submit Answer
+</button>
+
+<p class="text-center mt-3">
+Score: <span id="score1">0</span> |
+<span id="score2">0</span>
+</p>
+
+</div>
+
+<!-- Result -->
+<div id="result" class="hidden text-center">
+
+<h2 class="text-xl font-bold mb-2">🏆 Winner</h2>
+<p id="winnerText" class="mb-3"></p>
+
+<button onclick="location.reload()"
+class="bg-indigo-600 text-white w-full py-2 rounded mb-2">
+Play Again
+</button>
+
+<button onclick="goHome()"
+class="bg-gray-800 text-white w-full py-2 rounded">
+Back to
