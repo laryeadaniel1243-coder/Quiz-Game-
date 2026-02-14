@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrainBoost Login</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body{
+background: linear-gradient(135deg,#4f46e5,#9333ea,#ec4899);
+}
+.card{
+border-radius:25px;
+}
+</style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen p-4">
+
+<div class="card bg-white shadow-2xl w-full max-w-md p-6">
+
+<h1 class="text-center text-2xl font-bold text-indigo-600 mb-4">
+🧠 BrainBoost
+</h1>
+
+<!-- AUTH SECTION -->
+<div id="authSection">
+
+<input id="email" type="email" placeholder="Email"
+class="border p-2 w-full mb-2 rounded">
+
+<input id="password" type="password" placeholder="Password"
+class="border p-2 w-full mb-3 rounded">
+
+<button onclick="signUp()" 
+class="bg-indigo-600 text-white w-full py-2 rounded mb-2">
+Create Account
+</button>
+
+<button onclick="login()" 
+class="bg-gray-800 text-white w-full py-2 rounded">
+Login
+</button>
+
+<p id="authMessage" class="text-sm text-center mt-2 text-red-500"></p>
+
+</div>
+
+<!-- PROTECTED APP SECTION -->
+<div id="appSection" class="hidden">
+
+<p id="welcomeUser" class="text-center font-semibold mb-4"></p>
+
+<button onclick="goToGame()" 
+class="bg-purple-600 text-white w-full py-2 rounded mb-2">
+🎮 Enter Quiz Game
+</button>
+
+<button onclick="logout()" 
+class="bg-red-600 text-white w-full py-2 rounded">
+Logout
+</button>
+
+</div>
+
+</div>
+
+<!-- Firebase -->
+<script type="module">
+
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+
+import { getAuth, createUserWithEmailAndPassword,
+signInWithEmailAndPassword,
+signOut,
+onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+
+import { getFirestore, doc, setDoc } 
+from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+/* 🔥 YOUR FIREBASE CONFIG */
+const firebaseConfig = {
+apiKey: "YOUR_API_KEY",
+authDomain: "YOUR_AUTH_DOMAIN",
+projectId: "YOUR_PROJECT_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const authMessage = document.getElementById("authMessage");
+
+window.signUp = async function(){
+try{
+const userCredential = await createUserWithEmailAndPassword(
+auth, emailInput.value, passwordInput.value
+);
+
+// Create user document in Firestore
+await setDoc(doc(db,"users",userCredential.user.uid),{
+email: userCredential.user.email,
+score: 0,
+role: "user",
+createdAt: Date.now()
+});
+
+authMessage.textContent="Account created successfully!";
+}catch(error){
+authMessage.textContent=error.message;
+}
+}
+
+window.login = async function(){
+try{
+await signInWithEmailAndPassword(
+auth, emailInput.value, passwordInput.value
+);
+}catch(error){
+authMessage.textContent=error.message;
+}
+}
+
+window.logout = async function(){
+await signOut(auth);
+}
+
+window.goToGame = function(){
+window.location.href = "game.html";
+}
+
+// Auto Session Check
+onAuthStateChanged(auth,(user)=>{
+if(user){
+document.getElementById("authSection").classList.add("hidden");
+document.getElementById("appSection").classList.remove("hidden");
+document.getElementById("welcomeUser").textContent=
+"Welcome " + user.email;
+}else{
+document.getElementById("authSection").classList.remove("hidden");
+document.getElementById("appSection").classList.add("hidden");
+}
+});
+
+</script>
+
+</body>
+</html>
