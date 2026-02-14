@@ -1,0 +1,241 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrainBoost Pro Quiz</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+<style>
+  .dark-mode {
+    background: #111827;
+    color: white;
+  }
+</style>
+</head>
+
+<body id="body" class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 min-h-screen flex items-center justify-center transition-all duration-500">
+
+<div class="bg-white dark:bg-gray-900 shadow-2xl rounded-2xl p-6 w-[95%] max-w-2xl text-center relative">
+
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">🧠 BrainBoost Pro</h1>
+    <button onclick="toggleDark()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm">
+      🌙 Toggle
+    </button>
+  </div>
+
+  <!-- Setup Screen -->
+  <div id="setup">
+    <input id="player1Name" placeholder="Player 1 Name" class="border p-2 rounded mb-2 w-full">
+    <input id="player2Name" placeholder="Player 2 Name (Optional)" class="border p-2 rounded mb-4 w-full">
+
+    <select id="category" class="border p-2 rounded mb-4 w-full">
+      <option value="science">Science</option>
+      <option value="math">Mathematics</option>
+      <option value="general">General Knowledge</option>
+    </select>
+
+    <button onclick="startGame()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">
+      Start Game
+    </button>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div id="quiz" class="hidden">
+    <div class="flex justify-between mb-2 text-sm">
+      <span id="playerTurn"></span>
+      <span>⏳ <span id="timer">15</span>s</span>
+    </div>
+
+    <h2 id="question" class="text-lg font-semibold mb-4"></h2>
+    <div id="answers" class="grid gap-3 mb-4"></div>
+
+    <p class="font-bold">
+      Score: <span id="score1">0</span> |
+      <span id="score2">0</span>
+    </p>
+  </div>
+
+  <!-- Result Screen -->
+  <div id="result" class="hidden">
+    <h2 class="text-xl font-bold mb-3">🏆 Game Over</h2>
+    <p id="winner"></p>
+    <button onclick="restart()" class="mt-4 bg-indigo-600 text-white px-6 py-2 rounded-lg">
+      Play Again
+    </button>
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="mt-6">
+    <h3 class="font-bold mb-2">🏅 Leaderboard</h3>
+    <ul id="leaderboard" class="text-sm"></ul>
+  </div>
+
+</div>
+
+<!-- Sounds -->
+<audio id="correctSound" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
+<audio id="wrongSound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-bass-buzzer-948.mp3"></audio>
+
+<script>
+
+// Question Database
+const questionBank = {
+  science: [
+    {q:"What planet is known as the Red Planet?", a:["Earth","Mars","Jupiter","Saturn"], c:1},
+    {q:"What gas do plants absorb?", a:["Oxygen","Nitrogen","Carbon Dioxide","Hydrogen"], c:2}
+  ],
+  math: [
+    {q:"What is 12 x 8?", a:["96","88","92","100"], c:0},
+    {q:"Square root of 81?", a:["7","8","9","6"], c:2}
+  ],
+  general: [
+    {q:"Capital of France?", a:["Berlin","Madrid","Paris","Rome"], c:2},
+    {q:"Largest ocean?", a:["Atlantic","Indian","Pacific","Arctic"], c:2}
+  ]
+};
+
+let questions = [];
+let current = 0;
+let timer;
+let timeLeft = 15;
+let player1 = "", player2 = "";
+let score1 = 0, score2 = 0;
+let currentPlayer = 1;
+
+// Dark Mode
+function toggleDark(){
+  document.getElementById("body").classList.toggle("dark-mode");
+}
+
+// Start Game
+function startGame(){
+  player1 = document.getElementById("player1Name").value || "Player 1";
+  player2 = document.getElementById("player2Name").value;
+  const category = document.getElementById("category").value;
+  questions = questionBank[category];
+
+  document.getElementById("setup").classList.add("hidden");
+  document.getElementById("quiz").classList.remove("hidden");
+
+  loadQuestion();
+}
+
+// Timer
+function startTimer(){
+  timeLeft = 15;
+  document.getElementById("timer").textContent = timeLeft;
+  timer = setInterval(()=>{
+    timeLeft--;
+    document.getElementById("timer").textContent = timeLeft;
+    if(timeLeft <= 0){
+      clearInterval(timer);
+      nextQuestion();
+    }
+  },1000);
+}
+
+// Load Question
+function loadQuestion(){
+  clearInterval(timer);
+  startTimer();
+
+  const q = questions[current];
+  document.getElementById("question").textContent = q.q;
+  document.getElementById("playerTurn").textContent = 
+    player2 ? (currentPlayer === 1 ? player1+"'s Turn" : player2+"'s Turn") : player1;
+
+  const answersDiv = document.getElementById("answers");
+  answersDiv.innerHTML = "";
+
+  q.a.forEach((ans,i)=>{
+    const btn = document.createElement("button");
+    btn.textContent = ans;
+    btn.className = "bg-indigo-100 hover:bg-indigo-200 px-4 py-2 rounded-lg";
+    btn.onclick = ()=>selectAnswer(i);
+    answersDiv.appendChild(btn);
+  });
+
+  gsap.from("#quiz",{scale:0.9, opacity:0, duration:0.4});
+}
+
+// Select Answer
+function selectAnswer(index){
+  clearInterval(timer);
+  const correct = questions[current].c;
+
+  if(index === correct){
+    document.getElementById("correctSound").play();
+    if(currentPlayer === 1) score1++;
+    else score2++;
+  } else {
+    document.getElementById("wrongSound").play();
+  }
+
+  document.getElementById("score1").textContent = score1;
+  document.getElementById("score2").textContent = score2;
+
+  if(player2) currentPlayer = currentPlayer === 1 ? 2 : 1;
+
+  nextQuestion();
+}
+
+// Next Question
+function nextQuestion(){
+  current++;
+  if(current < questions.length){
+    loadQuestion();
+  } else {
+    endGame();
+  }
+}
+
+// End Game
+function endGame(){
+  document.getElementById("quiz").classList.add("hidden");
+  document.getElementById("result").classList.remove("hidden");
+
+  let winnerText;
+  if(score1 > score2) winnerText = player1 + " Wins!";
+  else if(score2 > score1) winnerText = player2 + " Wins!";
+  else winnerText = "It's a Draw!";
+
+  document.getElementById("winner").textContent = winnerText;
+
+  saveLeaderboard(winnerText);
+}
+
+// Restart
+function restart(){
+  location.reload();
+}
+
+// Leaderboard
+function saveLeaderboard(name){
+  let board = JSON.parse(localStorage.getItem("leaderboard")) || [];
+  board.push(name);
+  localStorage.setItem("leaderboard", JSON.stringify(board));
+  loadLeaderboard();
+}
+
+function loadLeaderboard(){
+  const board = JSON.parse(localStorage.getItem("leaderboard")) || [];
+  const list = document.getElementById("leaderboard");
+  list.innerHTML = "";
+  board.slice(-5).reverse().forEach(entry=>{
+    const li = document.createElement("li");
+    li.textContent = entry;
+    list.appendChild(li);
+  });
+}
+
+loadLeaderboard();
+
+</script>
+</body>
+</html>
